@@ -1,6 +1,6 @@
 {
   "name": "indexed-db-persist",
-  "version": "0.0.1",
+  "version": "0.0.11",
   "description": "A library for managing IndexedDB storage with a simple API.",
   "main": "src/index.ts",
   "types": "src/index.ts",
