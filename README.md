@@ -8,6 +8,7 @@ The IndexedDB Persist library provides a simple and efficient way to manage data
 
 - **Data Persistence**: Store and retrieve data using IndexedDB.
 - **Flexible API**: Simple methods for saving, removing, and clearing data.
+- **Configurable Stores**: Customize store names to organize your data.
 - **TypeScript Support**: Built with TypeScript for type safety and better development experience.
 
 ## Installation
@@ -37,6 +38,23 @@ const myPersist = new Persist<{ key1: string; key2: number }>({
   key1: '',
   key2: 0,
 });
+```
+
+### Configuration
+
+Configuring stores is optional. By default, the library uses "DefaultStore" as the default store. However, if you need to customize store names to fit your application's needs, you can do so:
+
+```typescript
+import { configure, Persist } from 'indexed-db-persist';
+
+// Configure custom stores
+configure({
+  defaultStore: 'DefaultStore',
+  storeNames: ['DefaultStore', 'ProductStore', 'UserStore']
+});
+
+// Now use the library with your custom stores
+const persist = new Persist();
 ```
 
 ### Methods
