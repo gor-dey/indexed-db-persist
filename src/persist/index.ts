@@ -17,6 +17,10 @@ type AuthDB<T> = {
   [K in storeNames]: T;
 };
 
+/**
+ * The Persist class manages IndexedDB storage for a given type T.
+ * It provides methods to get, save, remove, and clear data in the database.
+ */
 export class Persist<T extends Record<string, any>> {
   private static dbName = "DB";
   private dbPromise: Promise<IDBPDatabase<AuthDB<unknown>>> | null = null;
@@ -26,6 +30,11 @@ export class Persist<T extends Record<string, any>> {
     this.persisted = persisted;
   }
 
+  /**
+   * Retrieves data from the database for the specified store
+   * @param storeName - The name of the store to retrieve data from, defaults to the configured default store
+   * @returns Promise that resolves to an object containing the retrieved data
+   */
   async getData(storeName: keyof AuthDB<T> = defaultStore): Promise<T> {
     try {
       const db = await this.getDB();
@@ -50,6 +59,12 @@ export class Persist<T extends Record<string, any>> {
     }
   }
 
+  /**
+   * Saves data to the database under the specified store
+   * @param data - Partial object containing key-value pairs to save
+   * @param storeName - The name of the store to save data to, defaults to the configured default store
+   * @returns Promise that resolves when the data is saved
+   */
   async save(
     data: Partial<T>,
     storeName: keyof AuthDB<T> = defaultStore
@@ -60,6 +75,12 @@ export class Persist<T extends Record<string, any>> {
     }
   }
 
+  /**
+   * Removes data from the database for the specified key
+   * @param key - The key to remove from the store
+   * @param storeName - The name of the store to remove data from, defaults to the configured default store
+   * @returns Promise that resolves when the item is removed
+   */
   async remove(
     key: keyof T,
     storeName: keyof AuthDB<T> = defaultStore
@@ -82,6 +103,11 @@ export class Persist<T extends Record<string, any>> {
     await db.delete(storeName, key as string);
   }
 
+  /**
+   * Clears all data from the current instance of the Persist class
+   * @param storeName - The name of the store to clear data from, defaults to the configured default store
+   * @returns Promise that resolves when the data is cleared
+   */
   async clearThisInstance(
     storeName: keyof AuthDB<T> = defaultStore
   ): Promise<void> {
@@ -95,6 +121,10 @@ export class Persist<T extends Record<string, any>> {
     }
   }
 
+  /**
+   * Clears all data from the database
+   * @returns Promise that resolves when all data is cleared
+   */
   async clearAll(): Promise<void> {
     const db = await this.getDB();
     const storeNames = db.objectStoreNames;
