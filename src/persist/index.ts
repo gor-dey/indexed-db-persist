@@ -8,74 +8,63 @@
 // - clearThisInstance: Clears all data from the current instance of the Persist class.
 // - clearAll: Clears all data from the database.
 
-import { openDB, IDBPDatabase } from "idb";
-import { defaultStore, PersistConfig } from "./config";
+import { openDB, IDBPDatabase, deleteDB } from "idb";
+import { storeNames } from "./config";
+
+const defaultStore = storeNames[0];
 
 type AuthDB<T> = {
-  [K in PersistConfig]: T;
+  [K in storeNames]: T;
 };
 
-/**
- * Persist class for managing data persistence in IndexedDB
- * @template T - Type of data to be persisted, must be a record with string keys
- */
 export class Persist<T extends Record<string, any>> {
   private static dbName = "DB";
-  private static dbPromise: Promise<IDBPDatabase<AuthDB<unknown>>> | null =
-    null;
+  private dbPromise: Promise<IDBPDatabase<AuthDB<unknown>>> | null = null;
   private persisted: T;
 
-  /**
-   * Creates a new instance of the Persist class
-   * @param persisted - Initial data structure with default values
-   */
   constructor(persisted: T) {
     this.persisted = persisted;
   }
 
-  /**
-   * Retrieves data from the database for all keys in the persisted object
-   * @param storeName - The name of the store to retrieve data from, defaults to the configured default store
-   * @returns Promise resolving to an object with all retrieved values
-   */
   async getData(storeName: keyof AuthDB<T> = defaultStore): Promise<T> {
-    const db = await Persist.getDB(storeName);
-    const result: T = { ...this.persisted };
+    try {
+      const db = await this.getDB();
+      const result: T = { ...this.persisted };
 
-    for (const key of Object.keys(result) as (keyof T)[]) {
-      result[key] = (await db.get(storeName, key as string)) || null;
+      for (const key of Object.keys(result) as (keyof T)[]) {
+        result[key] = (await db.get(storeName, key as string)) || null;
+      }
+
+      return result;
+    } catch (error) {
+      this.dbPromise = null;
+
+      try {
+        await this.resetDatabase();
+        await this.getDB();
+      } catch (dbError) {
+        console.error("Failed to reestablish database connection:", dbError);
+      }
+
+      return { ...this.persisted };
     }
-
-    return result;
   }
 
-  /**
-   * Saves data to the database
-   * @param data - Partial data object with values to save
-   * @param storeName - The name of the store to save data to, defaults to the configured default store
-   * @returns Promise that resolves when all values are saved
-   */
   async save(
     data: Partial<T>,
     storeName: keyof AuthDB<T> = defaultStore
   ): Promise<void> {
-    const db = await Persist.getDB(storeName);
+    const db = await this.getDB();
     for (const [key, value] of Object.entries(data)) {
       await db.put(storeName, value, key);
     }
   }
 
-  /**
-   * Removes data for a specific key from the database
-   * @param key - The key to remove from the store
-   * @param storeName - The name of the store to remove data from, defaults to the configured default store
-   * @returns Promise that resolves when the item is removed
-   */
   async remove(
     key: keyof T,
     storeName: keyof AuthDB<T> = defaultStore
   ): Promise<void> {
-    const db = await Persist.getDB(storeName);
+    const db = await this.getDB();
     await db.delete(storeName, key as string);
   }
 
@@ -87,21 +76,16 @@ export class Persist<T extends Record<string, any>> {
    */
   async removePartOfMap(
     key: keyof T,
-    storeName: keyof AuthDB<T> = defaultStore
+    storeName: string = defaultStore
   ): Promise<void> {
-    const db = await Persist.getDB(storeName);
+    const db = await this.getDB();
     await db.delete(storeName, key as string);
   }
 
-  /**
-   * Clears all data associated with this instance from the database
-   * @param storeName - The name of the store to clear data from, defaults to the configured default store
-   * @returns Promise that resolves when all items are removed
-   */
   async clearThisInstance(
     storeName: keyof AuthDB<T> = defaultStore
   ): Promise<void> {
-    const db = await Persist.getDB(storeName);
+    const db = await this.getDB();
 
     for (const key of Object.keys(this.persisted)) {
       const item = await db.get(storeName, key);
@@ -111,12 +95,8 @@ export class Persist<T extends Record<string, any>> {
     }
   }
 
-  /**
-   * Clears all data from all stores in the database
-   * @returns Promise that resolves when all stores are cleared
-   */
   async clearAll(): Promise<void> {
-    const db = await Persist.getDB();
+    const db = await this.getDB();
     const storeNames = db.objectStoreNames;
 
     for (const storeName of storeNames) {
@@ -124,24 +104,38 @@ export class Persist<T extends Record<string, any>> {
     }
   }
 
-  /**
-   * Gets or initializes the database connection
-   * @param storeName - The name of the store to ensure exists
-   * @returns Promise resolving to the database connection
-   * @private
-   */
-  private static getDB(
-    storeName: keyof AuthDB<unknown> = defaultStore
-  ): Promise<IDBPDatabase<AuthDB<unknown>>> {
+  private getDB(): Promise<IDBPDatabase<AuthDB<unknown>>> {
     if (!this.dbPromise) {
-      this.dbPromise = openDB<AuthDB<unknown>>(this.dbName, 1, {
+      this.dbPromise = openDB<AuthDB<unknown>>(Persist.dbName, 1, {
         upgrade(db) {
-          if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName);
+          for (const storeName of storeNames) {
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName);
+            }
           }
         },
       });
     }
     return this.dbPromise;
+  }
+
+  /**
+   * Completely resets the database by deleting and recreating it
+   * @returns {Promise<void>}
+   */
+  private async resetDatabase(): Promise<void> {
+    try {
+      if (this.dbPromise) {
+        const db = await this.dbPromise;
+        db.close();
+        this.dbPromise = null;
+      }
+
+      await deleteDB(Persist.dbName);
+
+      await this.getDB();
+    } catch (error) {
+      throw error;
+    }
   }
 }

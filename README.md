@@ -2,18 +2,16 @@
 
 ## Overview
 
-The IndexedDB Persist library provides a simple and efficient way to manage data storage in IndexedDB. It offers a straightforward API for saving, retrieving, and managing data, making it easier to work with client-side storage in web applications.
+A lightweight library for simple and efficient data persistence with IndexedDB in web applications.
 
 ## Features
 
-- **Data Persistence**: Store and retrieve data using IndexedDB.
-- **Flexible API**: Simple methods for saving, removing, and clearing data.
-- **Configurable Stores**: Customize store names to organize your data.
-- **TypeScript Support**: Built with TypeScript for type safety and better development experience.
+- **Data Persistence**: Store and retrieve data using IndexedDB
+- **Flexible API**: Simple methods for data operations
+- **Configurable Stores**: Organize data with custom store names
+- **TypeScript Support**: Full type safety
 
 ## Installation
-
-To install the library, use npm:
 
 ```
 npm install indexed-db-persist
@@ -21,71 +19,10 @@ npm install indexed-db-persist
 
 ## Usage
 
-### Importing the Library
-
-You can import the `Persist` class from the library as follows:
-
 ```typescript
 import { Persist } from 'indexed-db-persist';
-```
 
-### Creating an Instance
-
-To create an instance of the `Persist` class, you need to pass an initial object that represents the data structure you want to persist:
-
-```typescript
-const myPersist = new Persist<{ key1: string; key2: number }>({
-  key1: '',
-  key2: 0,
-});
-```
-
-### Configuration
-
-Configuring stores is optional. By default, the library uses "DefaultStore" as the default store. However, if you need to customize store names to fit your application's needs, you can do so:
-
-```typescript
-import { configure, Persist } from 'indexed-db-persist';
-
-// Configure custom stores
-configure({
-  defaultStore: 'DefaultStore',
-  storeNames: ['DefaultStore', 'ProductStore', 'UserStore']
-});
-
-// Now use the library with your custom stores
-const persist = new Persist();
-```
-
-### Methods
-
-#### `getData(storeName?: string): Promise<T>`
-
-Retrieves data from the specified store. If no store name is provided, it uses the default store.
-
-#### `save(data: Partial<T>, storeName?: string): Promise<void>`
-
-Saves the provided data to the specified store.
-
-#### `remove(key: keyof T, storeName?: string): Promise<void>`
-
-Removes data from the specified store using the provided key.
-
-#### `removePartOfMap(key: keyof T, storeName?: string): Promise<void>`
-
-Removes a part of the data from the specified store for the given key.
-
-#### `clearThisInstance(storeName?: string): Promise<void>`
-
-Clears all data from the current instance of the `Persist` class for the specified store.
-
-#### `clearAll(): Promise<void>`
-
-Clears all data from the entire database.
-
-## Example
-
-```typescript
+// Create instance with initial data structure
 const persist = new Persist<{ name: string; age: number }>({
   name: '',
   age: 0,
@@ -105,11 +42,55 @@ await persist.remove('name');
 await persist.clearThisInstance();
 ```
 
-## Contributing
+## API
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
+- **getData(storeName?: string)**: Retrieves data from store
+- **save(data: Partial<T>, storeName?: string)**: Saves data to store
+- **remove(key: keyof T, storeName?: string)**: Removes data by key
+- **removePartOfMap(key: keyof T, storeName?: string)**: Removes part of map data
+- **clearThisInstance(storeName?: string)**: Clears instance data
+- **clearAll()**: Clears all database data
+
+## Example with MobX
+
+```typescript
+import { Persist } from 'indexed-db-persist';
+import { makeAutoObservable } from 'mobx';
+
+// Define data structure
+interface PersistedData {
+  theme: string;
+}
+
+// Create persist instance with defaults
+const persist = new Persist<PersistedData>({ theme: 'light' });
+
+class ThemeStore {
+  private _theme = 'light';
+
+  constructor() {
+    // Load saved data on initialization
+    persist.getData().then(data => {
+      if (data.theme) this.setTheme(data.theme);
+    });
+    
+    makeAutoObservable(this);
+  }
+
+  setTheme(theme: string) {
+    this._theme = theme;
+    // Save changes automatically
+    persist.save({ theme });
+  }
+  
+  get theme() {
+    return this._theme;
+  }
+}
+
+export const themeStore = new ThemeStore();
+```
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.# indexed-db-persist
-# indexed-db-persist
+MIT License

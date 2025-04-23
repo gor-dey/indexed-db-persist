@@ -1,8 +1,10 @@
-import { defaultStore } from "../src/persist/config";
+import { storeNames } from "../src/persist/config";
 import { Persist } from "../src/persist/index";
 import { openDB } from "idb";
 import "fake-indexeddb/auto";
 import { deleteDB } from "idb";
+
+const defaultStore = storeNames[0];
 
 describe("Persist Class", () => {
   let persist: Persist<{ key1: string; key2: number }>;
